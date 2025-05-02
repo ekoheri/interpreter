@@ -60,6 +60,7 @@ panjang_string:
     mov     rax, rcx
     ret
 
+;fungsi untuk mengkonversi string ke integer
 string_to_int:
     xor     rax, rax        ; rax = hasil (accumulator)
     xor     rcx, rcx        ; rcx = index loop
@@ -82,7 +83,7 @@ string_to_int:
 
 .done_stoi:
     ret
-    
+
 tambah:
     mov eax, edi     ; argumen pertama (a)
     add eax, esi     ; tambah dengan argumen kedua (b)
