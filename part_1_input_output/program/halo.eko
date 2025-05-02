@@ -1,0 +1,14 @@
+cetak("Hello word\n");
+cetak("isikan namamu disini : ");
+string nama;
+baca(nama);
+cetak("Namamu : ");
+cetak(nama);
+cetak("\n");
+cetak("Panjang huruf namamu : ");
+panjang_string(nama);
+string alamat;
+cetak("Isikan alamatmu : ");
+baca(alamat);
+cetak(alamat);
+cetak("\n");

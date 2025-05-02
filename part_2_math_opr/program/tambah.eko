@@ -1,0 +1,6 @@
+cetak("Program Tambah\n");
+cetak("Hasil 5 + 10 = "); 
+integer angka;
+angka = 5 + 10;
+cetak(angka);
+cetak("\n");
