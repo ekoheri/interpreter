@@ -1,0 +1,17 @@
+cetak("Program Kurang\n");
+cetak("Hasil 10 + 5 = "); 
+integer angka;
+angka = 10 + 5;
+cetak(angka);
+cetak("\n");
+string input_angka_1;
+cetak("Isikan angka 1 : ");
+baca(input_angka_1);
+cetak("Isikan angka 2 : ");
+string input_angka_2;
+baca(input_angka_2);
+cetak("Hasil pengurangan : ");
+integer hasil_pengurangan;
+hasil_pengurangan = string_to_int(input_angka_1) - string_to_int(input_angka_2);
+cetak(hasil_pengurangan);
+cetak("\n");
