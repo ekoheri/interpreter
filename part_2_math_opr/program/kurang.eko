@@ -1,7 +1,7 @@
 cetak("Program Kurang\n");
-cetak("Hasil 10 + 5 = "); 
+cetak("Hasil 10 - 5 = "); 
 integer angka;
-angka = 10 + 5;
+angka = 10 - 5;
 cetak(angka);
 cetak("\n");
 string input_angka_1;
