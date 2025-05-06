@@ -25,6 +25,7 @@ extern void baca(char *buffer);
 extern long panjang_string(char *buffer);
 extern long string_to_int(char *buffer);
 extern int tambah(int a, int b);
+extern int kurang(int a, int b);
 
 int* get_int_var(const char* name) {
     for (int i = 0; i < int_var_count; ++i)
@@ -178,6 +179,74 @@ void run_line(char* line) {
             int* target = get_int_var(name);
             if (target) {
                 *target = tambah(val1, val2);
+            }
+        }
+
+    } else if (strchr(line, '=') && strchr(line, '-')) {
+        // Assignment with addition
+        char* name = strtok(line, "=");
+        char* expr = strtok(NULL, ";");
+
+        if (name && expr) {
+            trim_trailing(name);
+            trim_trailing(expr);
+            while (*name == ' ') name++;
+            while (*expr == ' ') expr++;
+
+            // Pisahkan operand kiri dan kanan dari '+'
+            char* left = strtok(expr, "-");
+            char* right = strtok(NULL, "-");
+
+            if (!left || !right) return;
+
+            trim_trailing(left);
+            trim_trailing(right);
+            while (*left == ' ') left++;
+            while (*right == ' ') right++;
+
+            int val1 = 0, val2 = 0;
+
+            // ----------------------------
+            // Parsing operand kiri
+            if (strncmp(left, "string_to_int(", 14) == 0) {
+                char* inner = left + 14;
+                char* end = strchr(inner, ')');
+                if (end) *end = '\0';
+                char* str = get_var(inner);
+                if (str) val1 = string_to_int(str);
+            } else if (isdigit(*left) || (*left == '-' && isdigit(left[1]))) {
+                val1 = atoi(left);
+            } else {
+                int* temp = get_int_var(left);
+                if (temp) val1 = *temp;
+                else {
+                    char* str = get_var(left);
+                    if (str) val1 = string_to_int(str);
+                }
+            }
+
+            // ----------------------------
+            // Parsing operand kanan
+            if (strncmp(right, "string_to_int(", 14) == 0) {
+                char* inner = right + 14;
+                char* end = strchr(inner, ')');
+                if (end) *end = '\0';
+                char* str = get_var(inner);
+                if (str) val2 = string_to_int(str);
+            } else if (isdigit(*right) || (*right == '-' && isdigit(right[1]))) {
+                val2 = atoi(right);
+            } else {
+                int* temp = get_int_var(right);
+                if (temp) val2 = *temp;
+                else {
+                    char* str = get_var(right);
+                    if (str) val2 = string_to_int(str);
+                }
+            }
+
+            int* target = get_int_var(name);
+            if (target) {
+                *target = kurang(val1, val2);
             }
         }
 

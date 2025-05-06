@@ -8,6 +8,7 @@ section .text
     global panjang_string
     
     global tambah
+    global kurang
     global string_to_int
 
 ; void cetak(char *buffer)
@@ -89,3 +90,7 @@ tambah:
     add eax, esi     ; tambah dengan argumen kedua (b)
     ret    
 
+kurang:
+    mov eax, edi     ; argumen pertama (a)
+    sub eax, esi     ; tambah dengan argumen kedua (b)
+    ret    
