@@ -1,7 +1,7 @@
 // Compile :
 // gcc interpreter.c -o interpreter ./libraryio.so
 // Execute :
-// ./interpreter halo.eko
+// ./interpreter tambah.eko
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -19,13 +19,19 @@ int int_vars[MAX_VARS];
 char int_var_names[MAX_VARS][32];
 int int_var_count = 0;
 
+double double_vars[MAX_VARS];
+char double_var_names[MAX_VARS][32];
+int double_var_count = 0;
+
 // deklarasi fungsi eksternal dari Assembly
 extern void cetak(char *buffer);
 extern void baca(char *buffer);
 extern long panjang_string(char *buffer);
 extern long string_to_int(char *buffer);
+extern double string_to_double(char *buffer);
 extern int tambah(int a, int b);
 extern int kurang(int a, int b);
+extern double tambah_double(double a, double b);
 
 int* get_int_var(const char* name) {
     for (int i = 0; i < int_var_count; ++i)
@@ -38,6 +44,19 @@ void set_int_var(const char* name) {
     strcpy(int_var_names[int_var_count], name);
     int_vars[int_var_count] = 0;
     int_var_count++;
+}
+
+double* get_double_var(const char* name) {
+    for (int i = 0; i < double_var_count; ++i)
+        if (strcmp(double_var_names[i], name) == 0)
+            return &double_vars[i];
+    return NULL;
+}
+
+void set_double_var(const char* name) {
+    strcpy(double_var_names[double_var_count], name);
+    double_vars[double_var_count] = 0.0f;
+    double_var_count++;
 }
 
 char* get_var(const char* name) {
@@ -59,7 +78,7 @@ void cetak_str(const char* str) {
     for (int i = 0; str[i] != '\0' && j < MAX_LEN - 1; i++) {
         if (str[i] == '\\' && str[i + 1] == 'n') {
             temp[j++] = '\n';
-            i++; // lewati 'n'
+            i++;
         } else {
             temp[j++] = str[i];
         }
@@ -76,28 +95,36 @@ void trim_trailing(char* str) {
 }
 
 void run_line(char* line) {
-    if (strncmp(line, "cetak(", 6) == 0) {
+    if (strncmp(line, "cetak(", 6) == 0 ) {
         char* start = strchr(line, '(');
         char* end = strrchr(line, ')');
         if (!start || !end) return;
+        start++; *end = '\0';
 
-        start++;
-        *end = '\0';
+        while (*start == ' ') start++; // Trim leading spaces
 
-        if (start[0] == '"') {
-            start++;
-            end = strchr(start, '"');
-            if (end) *end = '\0';
-            cetak_str(start);
+        // Jika string literal
+        if (*start == '"' && start[strlen(start) - 1] == '"') {
+            start[strlen(start) - 1] = '\0'; // hapus tanda kutip akhir
+            cetak_str(start + 1); // hapus tanda kutip awal dan cetak
+            return;
+        }
+
+        // Jika bukan literal string, perlakukan sebagai nama variabel
+        char* val = get_var(start);
+        if (val) {
+            cetak(val);
         } else {
-            char* val = get_var(start);
-            if (val) {
-                cetak(val);
+            int* int_val = get_int_var(start);
+            if (int_val) {
+                char buf[32];
+                snprintf(buf, sizeof(buf), "%d", *int_val);
+                cetak(buf);
             } else {
-                int* int_val = get_int_var(start);
-                if (int_val) {
+                double* double_val = get_double_var(start);
+                if (double_val) {
                     char buf[32];
-                    snprintf(buf, sizeof(buf), "%d", *int_val);
+                    snprintf(buf, sizeof(buf), "%.2f", *double_val);
                     cetak(buf);
                 }
             }
@@ -114,8 +141,14 @@ void run_line(char* line) {
             set_int_var(name);
         }
 
+    } else if (strncmp(line, "double ", 7) == 0) {
+        char* name = strtok(line + 7, ";");
+        if (name) {
+            while (*name == ' ') name++;
+            set_double_var(name);
+        }
+
     } else if (strchr(line, '=') && strchr(line, '+')) {
-        // Assignment with addition
         char* name = strtok(line, "=");
         char* expr = strtok(NULL, ";");
 
@@ -125,7 +158,6 @@ void run_line(char* line) {
             while (*name == ' ') name++;
             while (*expr == ' ') expr++;
 
-            // Pisahkan operand kiri dan kanan dari '+'
             char* left = strtok(expr, "+");
             char* right = strtok(NULL, "+");
 
@@ -136,117 +168,78 @@ void run_line(char* line) {
             while (*left == ' ') left++;
             while (*right == ' ') right++;
 
-            int val1 = 0, val2 = 0;
+            int is_double = 0;
+            double val1f = 0.0f, val2f = 0.0f;
+            int val1i = 0, val2i = 0;
 
-            // ----------------------------
-            // Parsing operand kiri
-            if (strncmp(left, "string_to_int(", 14) == 0) {
+            if (strncmp(left, "string_to_double(", 16) == 0) {
+                char* inner = left + 16;
+                char* end = strchr(inner, ')');
+                if (end) *end = '\0';
+                char* str = get_var(inner);
+                if (str) { val1f = string_to_double(str); is_double = 1; }
+            } else if (strncmp(left, "string_to_int(", 14) == 0) {
                 char* inner = left + 14;
                 char* end = strchr(inner, ')');
                 if (end) *end = '\0';
                 char* str = get_var(inner);
-                if (str) val1 = string_to_int(str);
+                if (str) val1i = string_to_int(str);
+            } else if (strchr(left, '.')) {
+                val1f = atof(left); is_double = 1;
             } else if (isdigit(*left) || (*left == '-' && isdigit(left[1]))) {
-                val1 = atoi(left);
+                val1i = atoi(left);
             } else {
-                int* temp = get_int_var(left);
-                if (temp) val1 = *temp;
+                int* iv = get_int_var(left);
+                if (iv) val1i = *iv;
                 else {
-                    char* str = get_var(left);
-                    if (str) val1 = string_to_int(str);
+                    double* fv = get_double_var(left);
+                    if (fv) { val1f = *fv; is_double = 1; }
+                    else {
+                        char* str = get_var(left);
+                        if (str) { val1f = string_to_double(str); is_double = 1; }
+                    }
                 }
             }
 
-            // ----------------------------
-            // Parsing operand kanan
-            if (strncmp(right, "string_to_int(", 14) == 0) {
+            if (strncmp(right, "string_to_double(", 16) == 0) {
+                char* inner = right + 16;
+                char* end = strchr(inner, ')');
+                if (end) *end = '\0';
+                char* str = get_var(inner);
+                if (str) { val2f = string_to_double(str); is_double = 1; }
+            } else if (strncmp(right, "string_to_int(", 14) == 0) {
                 char* inner = right + 14;
                 char* end = strchr(inner, ')');
                 if (end) *end = '\0';
                 char* str = get_var(inner);
-                if (str) val2 = string_to_int(str);
+                if (str) val2i = string_to_int(str);
+            } else if (strchr(right, '.')) {
+                val2f = atof(right); is_double = 1;
             } else if (isdigit(*right) || (*right == '-' && isdigit(right[1]))) {
-                val2 = atoi(right);
+                val2i = atoi(right);
             } else {
-                int* temp = get_int_var(right);
-                if (temp) val2 = *temp;
+                int* iv = get_int_var(right);
+                if (iv) val2i = *iv;
                 else {
-                    char* str = get_var(right);
-                    if (str) val2 = string_to_int(str);
+                    double* fv = get_double_var(right);
+                    if (fv) { val2f = *fv; is_double = 1; }
+                    else {
+                        char* str = get_var(right);
+                        if (str) { val2f = string_to_double(str); is_double = 1; }
+                    }
                 }
             }
 
-            int* target = get_int_var(name);
-            if (target) {
-                *target = tambah(val1, val2);
-            }
-        }
-
-    } else if (strchr(line, '=') && strchr(line, '-')) {
-        // Assignment with addition
-        char* name = strtok(line, "=");
-        char* expr = strtok(NULL, ";");
-
-        if (name && expr) {
-            trim_trailing(name);
-            trim_trailing(expr);
-            while (*name == ' ') name++;
-            while (*expr == ' ') expr++;
-
-            // Pisahkan operand kiri dan kanan dari '+'
-            char* left = strtok(expr, "-");
-            char* right = strtok(NULL, "-");
-
-            if (!left || !right) return;
-
-            trim_trailing(left);
-            trim_trailing(right);
-            while (*left == ' ') left++;
-            while (*right == ' ') right++;
-
-            int val1 = 0, val2 = 0;
-
-            // ----------------------------
-            // Parsing operand kiri
-            if (strncmp(left, "string_to_int(", 14) == 0) {
-                char* inner = left + 14;
-                char* end = strchr(inner, ')');
-                if (end) *end = '\0';
-                char* str = get_var(inner);
-                if (str) val1 = string_to_int(str);
-            } else if (isdigit(*left) || (*left == '-' && isdigit(left[1]))) {
-                val1 = atoi(left);
-            } else {
-                int* temp = get_int_var(left);
-                if (temp) val1 = *temp;
-                else {
-                    char* str = get_var(left);
-                    if (str) val1 = string_to_int(str);
+            if (is_double) {
+                double* dest = get_double_var(name);
+                if (dest) {
+                    double lhs = (val1f != 0.0f || strchr(left, '.') || get_double_var(left)) ? val1f : (double)val1i;
+                    double rhs = (val2f != 0.0f || strchr(right, '.') || get_double_var(right)) ? val2f : (double)val2i;
+                    *dest = tambah_double(lhs, rhs);
                 }
-            }
-
-            // ----------------------------
-            // Parsing operand kanan
-            if (strncmp(right, "string_to_int(", 14) == 0) {
-                char* inner = right + 14;
-                char* end = strchr(inner, ')');
-                if (end) *end = '\0';
-                char* str = get_var(inner);
-                if (str) val2 = string_to_int(str);
-            } else if (isdigit(*right) || (*right == '-' && isdigit(right[1]))) {
-                val2 = atoi(right);
             } else {
-                int* temp = get_int_var(right);
-                if (temp) val2 = *temp;
-                else {
-                    char* str = get_var(right);
-                    if (str) val2 = string_to_int(str);
-                }
-            }
-
-            int* target = get_int_var(name);
-            if (target) {
-                *target = kurang(val1, val2);
+                int* dest = get_int_var(name);
+                if (dest) *dest = tambah(val1i, val2i);
             }
         }
 
@@ -254,50 +247,18 @@ void run_line(char* line) {
         char* start = strchr(line, '(');
         char* end = strchr(line, ')');
         if (!start || !end) return;
-        *end = '\0';
-        start++;
+        *end = '\0'; start++;
         char* var = get_var(start);
         if (var) baca(var);
-
-    } else if (strncmp(line, "panjang_string(", 15) == 0) {
-        char* start = strchr(line, '(');
-        char* end = strchr(line, ')');
-        if (!start || !end) return;
-        *end = '\0';
-        start++;
-
-        char* var = get_var(start);
-        if (var) {
-            long len = panjang_string(var);
-            char buf[32];
-            snprintf(buf, sizeof(buf), "%ld\n", len);
-            cetak(buf);
-        }
-
-    } else if (strncmp(line, "string_to_int(", 14) == 0) {
-        char* start = strchr(line, '(');
-        char* end = strchr(line, ')');
-        if (!start || !end) return;
-        *end = '\0';
-        start++;
-
-        char* var = get_var(start);
-        if (var) {
-            long val = string_to_int(var);
-            char buf[32];
-            snprintf(buf, sizeof(buf), "%ld\n", val);
-            cetak(buf);
-        }
     }
 }
-
 
 int main(int argc, char *argv[]) {
     if (argc < 2) {
         fprintf(stderr, "Penggunaan: %s <nama_file_program>\n", argv[0]);
         return 1;
     }
-    
+
     FILE* f = fopen(argv[1], "r");
     if (!f) {
         fprintf(stderr, "Gagal membuka program %s\n", argv[1]);
