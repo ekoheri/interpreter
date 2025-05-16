@@ -1,0 +1,17 @@
+cetak("Program Modulus\n");
+cetak("Hasil 10 % 2 = "); 
+integer angka;
+angka = 10 % 2;
+cetak(angka);
+cetak("\n");
+string input_angka_1;
+cetak("Isikan angka 1 : ");
+baca(input_angka_1);
+cetak("Isikan angka 2 : ");
+string input_angka_2;
+baca(input_angka_2);
+cetak("Hasil Modulus : ");
+integer hasil_modulus;
+hasil_modulus = string_to_int(input_angka_1) % string_to_int(input_angka_2);
+cetak(hasil_modulus);
+cetak("\n");

@@ -22,3 +22,15 @@ hasil2 = 10.5 + 5;
 cetak("Hasil 10.5 + 5 = "); 
 cetak(hasil2);
 cetak("\n");
+cetak("Isikan angka pecahan 1 : ");
+string input_pecahan_1;
+baca(input_pecahan_1);
+cetak("Isikan angka pecahan 2 : ");
+string input_pecahan_2;
+baca(input_pecahan_2);
+cetak("Hasil penambahan angka pecahan : ");
+double hasil_pecahan;
+hasil_pecahan = string_to_double(input_pecahan_1) + string_to_double(input_pecahan_2);
+cetak(hasil_pecahan);
+cetak("\n");
+

@@ -31,7 +31,14 @@ extern long string_to_int(char *buffer);
 extern double string_to_double(char *buffer);
 extern int tambah(int a, int b);
 extern int kurang(int a, int b);
+extern int kali(int a, int b);
+extern int bagi(int a, int b);
+extern int modulus(int a, int b);
 extern double tambah_double(double a, double b);
+extern double kurang_double(double a, double b);
+extern double kali_double(double a, double b);
+extern double bagi_double(double a, double b);
+
 
 int* get_int_var(const char* name) {
     for (int i = 0; i < int_var_count; ++i)
@@ -172,12 +179,18 @@ void run_line(char* line) {
             double val1f = 0.0f, val2f = 0.0f;
             int val1i = 0, val2i = 0;
 
-            if (strncmp(left, "string_to_double(", 16) == 0) {
-                char* inner = left + 16;
+            if (strncmp(left, "string_to_double(", 17) == 0) {
+                char* inner = left + 17;
                 char* end = strchr(inner, ')');
-                if (end) *end = '\0';
+                if (!end) return;         // tambahan perlindungan
+                *end = '\0';
+                trim_trailing(inner);     // <-- penting
                 char* str = get_var(inner);
-                if (str) { val1f = string_to_double(str); is_double = 1; }
+                if (str) {
+                    trim_trailing(str);  // hapus spasi dan newline
+                    val1f = string_to_double(str);
+                    is_double = 1;
+                }
             } else if (strncmp(left, "string_to_int(", 14) == 0) {
                 char* inner = left + 14;
                 char* end = strchr(inner, ')');
@@ -201,12 +214,18 @@ void run_line(char* line) {
                 }
             }
 
-            if (strncmp(right, "string_to_double(", 16) == 0) {
-                char* inner = right + 16;
+            if (strncmp(right, "string_to_double(", 17) == 0) {
+                char* inner = right + 17;
                 char* end = strchr(inner, ')');
-                if (end) *end = '\0';
+                if (!end) return;         // tambahan perlindungan
+                *end = '\0';
+                trim_trailing(inner);     // <-- penting
                 char* str = get_var(inner);
-                if (str) { val2f = string_to_double(str); is_double = 1; }
+                if (str) {
+                    trim_trailing(str);  // hapus spasi dan newline
+                    val2f = string_to_double(str);
+                    is_double = 1;
+                }
             } else if (strncmp(right, "string_to_int(", 14) == 0) {
                 char* inner = right + 14;
                 char* end = strchr(inner, ')');
@@ -240,6 +259,390 @@ void run_line(char* line) {
             } else {
                 int* dest = get_int_var(name);
                 if (dest) *dest = tambah(val1i, val2i);
+            }
+        }
+    }  else if (strchr(line, '=') && strchr(line, '-')) {
+        char* name = strtok(line, "=");
+        char* expr = strtok(NULL, ";");
+
+        if (name && expr) {
+            trim_trailing(name);
+            trim_trailing(expr);
+            while (*name == ' ') name++;
+            while (*expr == ' ') expr++;
+
+            char* left = strtok(expr, "-");
+            char* right = strtok(NULL, "-");
+
+            if (!left || !right) return;
+
+            trim_trailing(left);
+            trim_trailing(right);
+            while (*left == ' ') left++;
+            while (*right == ' ') right++;
+
+            int is_double = 0;
+            double val1f = 0.0f, val2f = 0.0f;
+            int val1i = 0, val2i = 0;
+
+            if (strncmp(left, "string_to_double(", 17) == 0) {
+                char* inner = left + 17;
+                char* end = strchr(inner, ')');
+                if (!end) return;         // tambahan perlindungan
+                *end = '\0';
+                trim_trailing(inner);     // <-- penting
+                char* str = get_var(inner);
+                if (str) {
+                    trim_trailing(str);  // hapus spasi dan newline
+                    val1f = string_to_double(str);
+                    is_double = 1;
+                }
+            } else if (strncmp(left, "string_to_int(", 14) == 0) {
+                char* inner = left + 14;
+                char* end = strchr(inner, ')');
+                if (end) *end = '\0';
+                char* str = get_var(inner);
+                if (str) val1i = string_to_int(str);
+            } else if (strchr(left, '.')) {
+                val1f = atof(left); is_double = 1;
+            } else if (isdigit(*left) || (*left == '-' && isdigit(left[1]))) {
+                val1i = atoi(left);
+            } else {
+                int* iv = get_int_var(left);
+                if (iv) val1i = *iv;
+                else {
+                    double* fv = get_double_var(left);
+                    if (fv) { val1f = *fv; is_double = 1; }
+                    else {
+                        char* str = get_var(left);
+                        if (str) { val1f = string_to_double(str); is_double = 1; }
+                    }
+                }
+            }
+
+            if (strncmp(right, "string_to_double(", 17) == 0) {
+                char* inner = right + 17;
+                char* end = strchr(inner, ')');
+                if (!end) return;         // tambahan perlindungan
+                *end = '\0';
+                trim_trailing(inner);     // <-- penting
+                char* str = get_var(inner);
+                if (str) {
+                    trim_trailing(str);  // hapus spasi dan newline
+                    val2f = string_to_double(str);
+                    is_double = 1;
+                }
+            } else if (strncmp(right, "string_to_int(", 14) == 0) {
+                char* inner = right + 14;
+                char* end = strchr(inner, ')');
+                if (end) *end = '\0';
+                char* str = get_var(inner);
+                if (str) val2i = string_to_int(str);
+            } else if (strchr(right, '.')) {
+                val2f = atof(right); is_double = 1;
+            } else if (isdigit(*right) || (*right == '-' && isdigit(right[1]))) {
+                val2i = atoi(right);
+            } else {
+                int* iv = get_int_var(right);
+                if (iv) val2i = *iv;
+                else {
+                    double* fv = get_double_var(right);
+                    if (fv) { val2f = *fv; is_double = 1; }
+                    else {
+                        char* str = get_var(right);
+                        if (str) { val2f = string_to_double(str); is_double = 1; }
+                    }
+                }
+            }
+
+            if (is_double) {
+                double* dest = get_double_var(name);
+                if (dest) {
+                    double lhs = (val1f != 0.0f || strchr(left, '.') || get_double_var(left)) ? val1f : (double)val1i;
+                    double rhs = (val2f != 0.0f || strchr(right, '.') || get_double_var(right)) ? val2f : (double)val2i;
+                    *dest = kurang_double(lhs, rhs);
+                }
+            } else {
+                int* dest = get_int_var(name);
+                if (dest) *dest = kurang(val1i, val2i);
+            }
+        }
+
+    } else if (strchr(line, '=') && strchr(line, '*')) {
+        char* name = strtok(line, "=");
+        char* expr = strtok(NULL, ";");
+
+        if (name && expr) {
+            trim_trailing(name);
+            trim_trailing(expr);
+            while (*name == ' ') name++;
+            while (*expr == ' ') expr++;
+
+            char* left = strtok(expr, "*");
+            char* right = strtok(NULL, "*");
+
+            if (!left || !right) return;
+
+            trim_trailing(left);
+            trim_trailing(right);
+            while (*left == ' ') left++;
+            while (*right == ' ') right++;
+
+            int is_double = 0;
+            double val1f = 0.0f, val2f = 0.0f;
+            int val1i = 0, val2i = 0;
+
+            if (strncmp(left, "string_to_double(", 17) == 0) {
+                char* inner = left + 17;
+                char* end = strchr(inner, ')');
+                if (!end) return;         // tambahan perlindungan
+                *end = '\0';
+                trim_trailing(inner);     // <-- penting
+                char* str = get_var(inner);
+                if (str) {
+                    trim_trailing(str);  // hapus spasi dan newline
+                    val1f = string_to_double(str);
+                    is_double = 1;
+                }
+            } else if (strncmp(left, "string_to_int(", 14) == 0) {
+                char* inner = left + 14;
+                char* end = strchr(inner, ')');
+                if (end) *end = '\0';
+                char* str = get_var(inner);
+                if (str) val1i = string_to_int(str);
+            } else if (strchr(left, '.')) {
+                val1f = atof(left); is_double = 1;
+            } else if (isdigit(*left) || (*left == '-' && isdigit(left[1]))) {
+                val1i = atoi(left);
+            } else {
+                int* iv = get_int_var(left);
+                if (iv) val1i = *iv;
+                else {
+                    double* fv = get_double_var(left);
+                    if (fv) { val1f = *fv; is_double = 1; }
+                    else {
+                        char* str = get_var(left);
+                        if (str) { val1f = string_to_double(str); is_double = 1; }
+                    }
+                }
+            }
+
+            if (strncmp(right, "string_to_double(", 17) == 0) {
+                char* inner = right + 17;
+                char* end = strchr(inner, ')');
+                if (!end) return;         // tambahan perlindungan
+                *end = '\0';
+                trim_trailing(inner);     // <-- penting
+                char* str = get_var(inner);
+                if (str) {
+                    trim_trailing(str);  // hapus spasi dan newline
+                    val2f = string_to_double(str);
+                    is_double = 1;
+                }
+            } else if (strncmp(right, "string_to_int(", 14) == 0) {
+                char* inner = right + 14;
+                char* end = strchr(inner, ')');
+                if (end) *end = '\0';
+                char* str = get_var(inner);
+                if (str) val2i = string_to_int(str);
+            } else if (strchr(right, '.')) {
+                val2f = atof(right); is_double = 1;
+            } else if (isdigit(*right) || (*right == '-' && isdigit(right[1]))) {
+                val2i = atoi(right);
+            } else {
+                int* iv = get_int_var(right);
+                if (iv) val2i = *iv;
+                else {
+                    double* fv = get_double_var(right);
+                    if (fv) { val2f = *fv; is_double = 1; }
+                    else {
+                        char* str = get_var(right);
+                        if (str) { val2f = string_to_double(str); is_double = 1; }
+                    }
+                }
+            }
+
+            if (is_double) {
+                double* dest = get_double_var(name);
+                if (dest) {
+                    double lhs = (val1f != 0.0f || strchr(left, '.') || get_double_var(left)) ? val1f : (double)val1i;
+                    double rhs = (val2f != 0.0f || strchr(right, '.') || get_double_var(right)) ? val2f : (double)val2i;
+                    *dest = kali_double(lhs, rhs);
+                }
+            } else {
+                int* dest = get_int_var(name);
+                if (dest) *dest = kali(val1i, val2i);
+            }
+        }
+    } else if (strchr(line, '=') && strchr(line, '/')) {
+        char* name = strtok(line, "=");
+        char* expr = strtok(NULL, ";");
+
+        if (name && expr) {
+            trim_trailing(name);
+            trim_trailing(expr);
+            while (*name == ' ') name++;
+            while (*expr == ' ') expr++;
+
+            char* left = strtok(expr, "/");
+            char* right = strtok(NULL, "/");
+
+            if (!left || !right) return;
+
+            trim_trailing(left);
+            trim_trailing(right);
+            while (*left == ' ') left++;
+            while (*right == ' ') right++;
+
+            int is_double = 0;
+            double val1f = 0.0f, val2f = 0.0f;
+            int val1i = 0, val2i = 0;
+
+            if (strncmp(left, "string_to_double(", 17) == 0) {
+                char* inner = left + 17;
+                char* end = strchr(inner, ')');
+                if (!end) return;         // tambahan perlindungan
+                *end = '\0';
+                trim_trailing(inner);     // <-- penting
+                char* str = get_var(inner);
+                if (str) {
+                    trim_trailing(str);  // hapus spasi dan newline
+                    val1f = string_to_double(str);
+                    is_double = 1;
+                }
+            } else if (strncmp(left, "string_to_int(", 14) == 0) {
+                char* inner = left + 14;
+                char* end = strchr(inner, ')');
+                if (end) *end = '\0';
+                char* str = get_var(inner);
+                if (str) val1i = string_to_int(str);
+            } else if (strchr(left, '.')) {
+                val1f = atof(left); is_double = 1;
+            } else if (isdigit(*left) || (*left == '-' && isdigit(left[1]))) {
+                val1i = atoi(left);
+            } else {
+                int* iv = get_int_var(left);
+                if (iv) val1i = *iv;
+                else {
+                    double* fv = get_double_var(left);
+                    if (fv) { val1f = *fv; is_double = 1; }
+                    else {
+                        char* str = get_var(left);
+                        if (str) { val1f = string_to_double(str); is_double = 1; }
+                    }
+                }
+            }
+
+            if (strncmp(right, "string_to_double(", 17) == 0) {
+                char* inner = right + 17;
+                char* end = strchr(inner, ')');
+                if (!end) return;         // tambahan perlindungan
+                *end = '\0';
+                trim_trailing(inner);     // <-- penting
+                char* str = get_var(inner);
+                if (str) {
+                    trim_trailing(str);  // hapus spasi dan newline
+                    val2f = string_to_double(str);
+                    is_double = 1;
+                }
+            } else if (strncmp(right, "string_to_int(", 14) == 0) {
+                char* inner = right + 14;
+                char* end = strchr(inner, ')');
+                if (end) *end = '\0';
+                char* str = get_var(inner);
+                if (str) val2i = string_to_int(str);
+            } else if (strchr(right, '.')) {
+                val2f = atof(right); is_double = 1;
+            } else if (isdigit(*right) || (*right == '-' && isdigit(right[1]))) {
+                val2i = atoi(right);
+            } else {
+                int* iv = get_int_var(right);
+                if (iv) val2i = *iv;
+                else {
+                    double* fv = get_double_var(right);
+                    if (fv) { val2f = *fv; is_double = 1; }
+                    else {
+                        char* str = get_var(right);
+                        if (str) { val2f = string_to_double(str); is_double = 1; }
+                    }
+                }
+            }
+
+            if (is_double) {
+                double* dest = get_double_var(name);
+                if (dest) {
+                    double lhs = (val1f != 0.0f || strchr(left, '.') || get_double_var(left)) ? val1f : (double)val1i;
+                    double rhs = (val2f != 0.0f || strchr(right, '.') || get_double_var(right)) ? val2f : (double)val2i;
+                    *dest = bagi_double(lhs, rhs);
+                }
+            } else {
+                int* dest = get_int_var(name);
+                if (dest) *dest = bagi(val1i, val2i);
+            }
+        }
+    } else if (strchr(line, '=') && strchr(line, '%')) {
+        char* name = strtok(line, "=");
+        char* expr = strtok(NULL, ";");
+
+        if (name && expr) {
+            trim_trailing(name);
+            trim_trailing(expr);
+            while (*name == ' ') name++;
+            while (*expr == ' ') expr++;
+
+            char* left = strtok(expr, "%");
+            char* right = strtok(NULL, "%");
+
+            if (!left || !right) return;
+
+            trim_trailing(left);
+            trim_trailing(right);
+            while (*left == ' ') left++;
+            while (*right == ' ') right++;
+
+            int val1i = 0, val2i = 0;
+
+            if (strncmp(left, "string_to_int(", 14) == 0) {
+                char* inner = left + 14;
+                char* end = strchr(inner, ')');
+                if (end) *end = '\0';
+                char* str = get_var(inner);
+                if (str) val1i = string_to_int(str);
+            } else if (isdigit(*left) || (*left == '-' && isdigit(left[1]))) {
+                val1i = atoi(left);
+            } else {
+                int* iv = get_int_var(left);
+                if (iv) val2i = *iv;
+                else {
+                    char* str = get_var(left);
+                    if (str) val1i = string_to_int(str);
+                }
+            }
+
+            if (strncmp(right, "string_to_int(", 14) == 0) {
+                char* inner = right + 14;
+                char* end = strchr(inner, ')');
+                if (end) *end = '\0';
+                char* str = get_var(inner);
+                if (str) val2i = string_to_int(str);
+            } else if (isdigit(*right) || (*right == '-' && isdigit(right[1]))) {
+                val2i = atoi(right);
+            } else {
+                int* iv = get_int_var(right);
+                if (iv) val2i = *iv;
+                else {
+                    char* str = get_var(right);
+                    if (str) val2i = string_to_int(str);
+                }
+            }
+
+            int* dest = get_int_var(name);
+            if (dest) {
+                if (val2i == 0) {
+                    printf("Error: Pembagian dengan nol tidak diperbolehkan (modulus).\n");
+                    return;
+                }
+                *dest = modulus(val1i, val2i);
             }
         }
 
